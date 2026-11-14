@@ -70,7 +70,4 @@ generated `SECRET_KEY` in the environment for stable local sessions. For
 deployment, configure a strong secret outside the source code and use a
 production WSGI server; do not enable Flask debug mode on a public server.
 
-## License
 
-No license is currently included. Add a license if you want to grant others
-permission to use, modify, or distribute this project.
