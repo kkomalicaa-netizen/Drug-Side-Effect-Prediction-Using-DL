@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseGlow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+        50%       { box-shadow: 0 0 24px 4px rgba(168, 85, 247, 0.18); }
+    }
+    @keyframes scanLine {
+        0%   { transform: translateY(-100%); opacity: 0.5; }
+        100% { transform: translateY(600%); opacity: 0; }
+    }
+    .card-appear   { animation: fadeInUp 0.5s ease-out both; }
+    .drug-input-box { transition: border-color 0.2s, box-shadow 0.2s; }
+    .drug-input-box:focus {
+        border-color: #a855f7;
+        box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
+        outline: none;
+    }
+    .sev-CONTRAINDICATED { --sev-bg: rgba(239,68,68,0.09); --sev-bd: rgba(239,68,68,0.40); --sev-text: #f87171; --sev-badge-bg: rgba(239,68,68,0.20); }
+    .sev-SEVERE          { --sev-bg: rgba(249,115,22,0.09); --sev-bd: rgba(249,115,22,0.40); --sev-text: #fb923c; --sev-badge-bg: rgba(249,115,22,0.20); }
+    .sev-MODERATE        { --sev-bg: rgba(234,179,8,0.09);  --sev-bd: rgba(234,179,8,0.40);  --sev-text: #facc15; --sev-badge-bg: rgba(234,179,8,0.20); }
+    .sev-MILD            { --sev-bg: rgba(34,197,94,0.09);  --sev-bd: rgba(34,197,94,0.40);  --sev-text: #4ade80; --sev-badge-bg: rgba(34,197,94,0.20); }
+    .interaction-card {
+        background:    var(--sev-bg);
+        border:        1px solid var(--sev-bd);
+        border-radius: 1.25rem;
+        padding:       1.5rem;
+        animation:     fadeInUp 0.45s ease-out both;
+        transition:    transform 0.25s, box-shadow 0.25s;
+    }
+    .interaction-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+    .sev-label {
+        background: var(--sev-badge-bg);
+        color:      var(--sev-text);
+        border:     1px solid var(--sev-bd);
+    }
+</style>
+
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <!-- ═══ PAGE HEADER ═══════════════════════════════════════════════════════ -->
+    <div class="text-center mb-12 card-appear">
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-5 py-2 text-sm font-bold text-purple-300 mb-5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            Clinical Decision Support Tool
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4">
+            Drug–Drug Interaction
+            <span class="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"> Checker</span>
+        </h1>
+        <p class="text-slate-400 text-lg max-w-2xl mx-auto">
+            Enter up to <strong class="text-slate-200">5 medications</strong> you are taking. We'll instantly analyse all pairwise combinations for harmful interactions, severity levels, and safer alternatives.
+        </p>
+    </div>
+
+    <!-- ═══ INPUT FORM ══════════════════════════════════════════════════════════ -->
+    <div class="bg-slate-800/70 backdrop-blur border border-slate-700/60 rounded-3xl p-8 mb-10 card-appear shadow-2xl" style="animation-delay:0.1s">
+        <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+            <span class="w-7 h-7 bg-purple-500/20 border border-purple-500/40 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            </span>
+            Enter Your Medications
+        </h2>
+
+        <form method="POST" action="/ddi" id="ddi-form">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8" id="drug-fields">
+                {% for i in range(1, 6) %}
+                <div class="relative group" style="animation: fadeInUp 0.4s ease-out {{ (i * 0.07)|round(2) }}s both;">
+                    <label class="block text-xs font-semibold text-slate-400 mb-1.5 ml-1">
+                        Medicine {{ i }} {% if i <= 2 %}<span class="text-purple-400">*</span>{% else %}<span class="text-slate-600">(optional)</span>{% endif %}
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            name="drug_{{ i }}"
+                            id="drug_{{ i }}"
+                            value="{{ drug_inputs[i-1] if drug_inputs and drug_inputs|length >= i else '' }}"
+                            placeholder="e.g. {{ ['Dolo', 'Amoxicillin', 'Cetirizine', 'Ibuprofen', 'Omeprazole'][i-1] }}"
+                            class="drug-input-box w-full bg-slate-900/60 border border-slate-600/50 text-white placeholder-slate-600 rounded-xl pl-10 pr-4 py-3 text-sm font-medium"
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                <button type="submit" id="check-btn"
+                    class="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3.5 px-10 rounded-xl shadow-lg shadow-purple-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-purple-500/40 flex items-center justify-center gap-2.5 text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Check Interactions
+                </button>
+                <a href="/ddi"
+                    class="w-full sm:w-auto text-center border border-slate-600 text-slate-400 hover:text-white hover:border-slate-400 font-medium py-3.5 px-8 rounded-xl text-sm transition-all duration-300">
+                    Clear & Reset
+                </a>
+            </div>
+        </form>
+
+        <!-- Quick example chips -->
+        <div class="mt-6 flex flex-wrap gap-2 items-center">
+            <span class="text-xs text-slate-500 font-medium">Try example:</span>
+            <button onclick="fillExample(['Dolo','Amoxicillin','Cetirizine','',''])" type="button"
+                class="text-xs bg-slate-700/60 hover:bg-purple-500/20 text-slate-300 hover:text-purple-300 border border-slate-600 hover:border-purple-500/50 px-3 py-1.5 rounded-full transition-all">
+                Dolo + Amoxicillin + Cetirizine
+            </button>
+            <button onclick="fillExample(['Aspirin','Warfarin','','',''])" type="button"
+                class="text-xs bg-slate-700/60 hover:bg-purple-500/20 text-slate-300 hover:text-purple-300 border border-slate-600 hover:border-purple-500/50 px-3 py-1.5 rounded-full transition-all">
+                Aspirin + Warfarin
+            </button>
+            <button onclick="fillExample(['Azithromycin','Ciprofloxacin','Atorvastatin','',''])" type="button"
+                class="text-xs bg-slate-700/60 hover:bg-purple-500/20 text-slate-300 hover:text-purple-300 border border-slate-600 hover:border-purple-500/50 px-3 py-1.5 rounded-full transition-all">
+                Azithromycin + Ciprofloxacin + Atorvastatin
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══ RESULTS SECTION ════════════════════════════════════════════════════ -->
+    {% if checked %}
+
+        <!-- Summary bar -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+            <div>
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    {% if interactions %}
+                        <span class="text-2xl">⚠️</span> {{ interactions|length }} Interaction{{ 's' if interactions|length != 1 else '' }} Found
+                    {% else %}
+                        <span class="text-2xl">✅</span> No Known Interactions Detected
+                    {% endif %}
+                </h2>
+                <p class="text-slate-400 text-sm mt-1">
+                    {% if drug_inputs %}
+                        Analysed: <span class="text-slate-200 font-medium">{{ drug_inputs | join(', ') }}</span>
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Severity summary pills -->
+            {% if interactions %}
+            <div class="flex flex-wrap gap-2 flex-shrink-0">
+                {% set contraind = interactions | selectattr('severity','equalto','CONTRAINDICATED') | list | length %}
+                {% set severe    = interactions | selectattr('severity','equalto','SEVERE')          | list | length %}
+                {% set moderate  = interactions | selectattr('severity','equalto','MODERATE')        | list | length %}
+                {% set mild      = interactions | selectattr('severity','equalto','MILD')            | list | length %}
+                {% if contraind > 0 %}
+                <span class="text-[11px] font-black px-3 py-1.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/40">{{ contraind }} CONTRAINDICATED</span>
+                {% endif %}
+                {% if severe > 0 %}
+                <span class="text-[11px] font-black px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/40">{{ severe }} SEVERE</span>
+                {% endif %}
+                {% if moderate > 0 %}
+                <span class="text-[11px] font-black px-3 py-1.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/40">{{ moderate }} MODERATE</span>
+                {% endif %}
+                {% if mild > 0 %}
+                <span class="text-[11px] font-black px-3 py-1.5 rounded-full bg-green-500/20 text-green-300 border border-green-500/40">{{ mild }} MILD</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if interactions %}
+            <!-- Interaction Cards -->
+            <div class="space-y-5">
+                {% for ix in interactions %}
+                {% set delay = loop.index0 * 0.08 %}
+                <div class="interaction-card sev-{{ ix.severity }}" style="animation-delay:{{ delay }}s">
+                    <!-- Card header -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <!-- Drug A pill -->
+                            <span class="inline-flex items-center px-3.5 py-1.5 bg-slate-800 border border-slate-600 rounded-full text-sm font-bold text-white">
+                                💊 {{ ix.drug_a }}
+                            </span>
+                            <!-- Plus -->
+                            <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                            <!-- Drug B pill -->
+                            <span class="inline-flex items-center px-3.5 py-1.5 bg-slate-800 border border-slate-600 rounded-full text-sm font-bold text-white">
+                                💊 {{ ix.drug_b }}
+                            </span>
+                        </div>
+                        <!-- Severity badge -->
+                        <span class="sev-label inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider flex-shrink-0">
+                            {% if ix.severity == 'CONTRAINDICATED' %}🚫{% elif ix.severity == 'SEVERE' %}🔴{% elif ix.severity == 'MODERATE' %}🟡{% else %}🟢{% endif %}
+                            {{ ix.severity }}
+                        </span>
+                    </div>
+
+                    <!-- Effect description -->
+                    <div class="mb-4">
+                        <p class="text-sm font-semibold text-white mb-1">⚡ Effect</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">{{ ix.effect }}</p>
+                    </div>
+
+                    <!-- Mechanism -->
+                    <div class="mb-4 bg-slate-900/40 rounded-xl p-3.5">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">🔬 Mechanism</p>
+                        <p class="text-sm text-slate-300 leading-relaxed">{{ ix.mechanism }}</p>
+                    </div>
+
+                    <!-- Recommendation -->
+                    <div class="mb-4 flex items-start gap-2.5">
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style="background:var(--sev-badge-bg);border:1px solid var(--sev-bd)">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="color:var(--sev-text)"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest mb-1" style="color:var(--sev-text)">Recommendation</p>
+                            <p class="text-sm text-slate-200 leading-relaxed font-medium">{{ ix.recommendation }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Safer alternatives -->
+                    {% if ix.alternatives %}
+                    <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-700/40">
+                        <span class="text-xs text-slate-500 font-medium">Safer alternatives:</span>
+                        {% for alt in ix.alternatives %}
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-slate-700/60 text-slate-200 border border-slate-600/60">
+                            <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            {{ alt }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+        {% else %}
+            <!-- ✅ All Clear state -->
+            <div class="text-center py-16 bg-green-500/5 border border-green-500/20 rounded-3xl card-appear">
+                <div class="w-20 h-20 bg-green-500/15 rounded-full flex items-center justify-center mx-auto mb-5 border border-green-500/30">
+                    <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">No Interactions Found</h3>
+                <p class="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
+                    No clinically documented interactions were found between the entered drugs in our database. This does not guarantee safety — always consult your doctor or pharmacist.
+                </p>
+                <div class="mt-6 inline-flex items-center gap-2 text-xs text-slate-500 bg-slate-800/60 border border-slate-700/50 rounded-full px-4 py-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Database covers 50+ common drug combinations
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Medical disclaimer -->
+        <div class="mt-8 flex items-start gap-3 bg-slate-900/40 border border-slate-700/50 rounded-2xl p-5">
+            <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-xs text-slate-400 leading-relaxed">
+                <strong class="text-slate-300">Medical Disclaimer:</strong>
+                This tool is based on published clinical interaction data (FDA, BNF, WHO). It is intended for educational and informational purposes only and does NOT replace professional medical advice, diagnosis, or treatment. Always consult your doctor or pharmacist before changing your medications.
+            </p>
+        </div>
+
+    {% else %}
+        <!-- ═══ HOW IT WORKS (shown before first check) ═══════════════════════ -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+            {% for step in [
+                {'num':'1', 'icon':'M12 4v16m8-8H4', 'title':'Enter Medicines', 'desc':'Type the names of 2–5 medicines you currently take or plan to take together.'},
+                {'num':'2', 'icon':'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', 'title':'Instant Analysis', 'desc':'Our system checks all drug pairs against a database of 50+ clinically documented interactions.'},
+                {'num':'3', 'icon':'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', 'title':'Get Results', 'desc':'See severity ratings, mechanisms, and recommended safer alternatives instantly.'}
+            ] %}
+            <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 hover:border-purple-500/30 transition-all duration-300 hover:bg-slate-800/80 card-appear" style="animation-delay:{{ loop.index0 * 0.12 }}s">
+                <div class="w-10 h-10 bg-purple-500/15 border border-purple-500/30 rounded-xl flex items-center justify-center mb-4">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ step.icon }}"/></svg>
+                </div>
+                <div class="text-xs font-black text-purple-500 uppercase tracking-widest mb-2">Step {{ step.num }}</div>
+                <h3 class="font-bold text-white text-base mb-2">{{ step.title }}</h3>
+                <p class="text-sm text-slate-400 leading-relaxed">{{ step.desc }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Severity legend -->
+        <div class="mt-8 bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 card-appear" style="animation-delay:0.4s">
+            <h3 class="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                Severity Level Guide
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {% for sev in [
+                    {'label':'CONTRAINDICATED','emoji':'🚫','color':'text-red-300','bg':'bg-red-500/10','bd':'border-red-500/30','desc':'Do not combine under any circumstances.'},
+                    {'label':'SEVERE','emoji':'🔴','color':'text-orange-300','bg':'bg-orange-500/10','bd':'border-orange-500/30','desc':'Avoid combination or monitor very closely.'},
+                    {'label':'MODERATE','emoji':'🟡','color':'text-yellow-300','bg':'bg-yellow-500/10','bd':'border-yellow-500/30','desc':'Use caution; medical supervision advised.'},
+                    {'label':'MILD','emoji':'🟢','color':'text-green-300','bg':'bg-green-500/10','bd':'border-green-500/30','desc':'Generally safe; standard monitoring.'}
+                ] %}
+                <div class="{{ sev.bg }} border {{ sev.bd }} rounded-xl p-3.5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-lg">{{ sev.emoji }}</span>
+                        <span class="text-xs font-black {{ sev.color }} uppercase tracking-wider">{{ sev.label }}</span>
+                    </div>
+                    <p class="text-xs text-slate-400">{{ sev.desc }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+function fillExample(drugs) {
+    ['drug_1','drug_2','drug_3','drug_4','drug_5'].forEach((id, i) => {
+        var el = document.getElementById(id);
+        if (el) el.value = drugs[i] || '';
+    });
+    document.getElementById('ddi-form').submit();
+}
+</script>
+
+{% endblock %}

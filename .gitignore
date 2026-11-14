@@ -1,0 +1,21 @@
+# Python environments and cache
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local configuration and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# Local user data and generated reports
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+reports/*
+
+# Test and editor artifacts
+.pytest_cache/
+.vscode/

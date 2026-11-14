@@ -1,0 +1,1 @@
+{"Logistic Regression": {"accuracy": 0.6316666666666667, "roc_auc": 0.5468069103021764, "confusion_matrix": [[0, 221], [0, 379]]}, "Random Forest": {"accuracy": 0.555, "roc_auc": 0.5090199262168842, "confusion_matrix": [[63, 158], [109, 270]]}, "XGBoost": {"accuracy": 0.5683333333333334, "roc_auc": 0.5040891128117575, "confusion_matrix": [[64, 157], [102, 277]]}}
